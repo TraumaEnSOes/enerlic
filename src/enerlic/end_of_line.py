@@ -1,0 +1,1 @@
+EndOfLine = ord( "\n" )
