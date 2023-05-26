@@ -5,8 +5,7 @@ from .connection import Connection
 
 
 class UserMessage:
-    def __init__( self, sender: str, text: str ):
-        self.sender = sender
+    def __init__( self, text: str ):
         self.text = text
 
 
@@ -44,15 +43,13 @@ class ServerConnection( Connection ):
         if line[0] != "@":
             return await super( )._fromWire( line )
 
-        sepPos = str.index( " " )
-
-        return UserMessage( line[1:sepPos], line[sepPos + 1:] )
+        return UserMessage( line[1:] )
 
     async def _processMessage( self, msg ) -> None:
         if not isinstance( msg, UserMessage ):
             await super( )._processMessage( msg )
 
-        await Connection._callListener( self._onUserMessage, )
+        await Connection._callListener( self._onUserMessage, self, msg.text )
 
     def clearListeners( self ) -> None:
         self._onUserMessage = None

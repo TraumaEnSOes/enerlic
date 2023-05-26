@@ -28,7 +28,7 @@ class ClientConnection( Connection ):
         if not isinstance( msg, UserMessage ):
             await super( )._processMessage( msg )
 
-        Connection._callListener( self._onUserMessage, )
+        Connection._callListener( self._onUserMessage, msg.sender, msg.text )
 
     def clearListeners( self ) -> None:
         self._onUserMessage = None

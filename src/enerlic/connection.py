@@ -100,7 +100,7 @@ class Connection:
         log = self._log
 
         if isinstance( msg, Exception ):
-            Connection._callListener( self._onException, self )
+            await Connection._callListener( self._onException, self )
 
         elif isinstance( msg, Ping ):
             await self._writer.drain( )

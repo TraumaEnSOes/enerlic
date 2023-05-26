@@ -53,6 +53,27 @@ class TestConnection( unittest.IsolatedAsyncioTestCase ):
         assert len( sentData ) == 1
         assert sentData[0] == conn
 
+    async def test_bad_wire( self ):
+        sentData = [ ]
+
+        def dataReceived( connection, err ):
+            sentData.append( err )
+
+        reader = FakeReader( )
+        writer = FakeWriter( )
+        conn = Connection( reader, writer )
+
+        conn.onException( dataReceived )
+
+        conn.run( )
+        await reader.write( b"\n" )
+        await asyncio.sleep( 0.0 )
+
+        await conn.stop( )
+
+        assert len( sentData ) == 1
+        assert isinstance( sentData[1], WireException )
+
 
 if __name__ == "__main__":
     srcPath = os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) )
@@ -60,6 +81,6 @@ if __name__ == "__main__":
 
     sys.path.append( srcPath )
 
-    from enerlic.connection import Connection, Ping, Pong
+    from enerlic.connection import Connection, Ping, Pong, WireException
 
     unittest.main( )
