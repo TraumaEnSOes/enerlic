@@ -4,7 +4,7 @@ import os
 import sys
 
 
-from fakes.streams import *
+from tests.fakes.streams import *
 
 
 class TestConnection( unittest.IsolatedAsyncioTestCase ):

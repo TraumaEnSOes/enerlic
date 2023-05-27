@@ -1,4 +1,4 @@
-from .connection import Connection
+from .connection import *
 
 class UserMessage:
     def __init__( self, sender: str, text: str ):
@@ -10,25 +10,26 @@ class ClientConnection( Connection ):
         super( ).__init__( reader, writer )
 
     async def sendText( self, data: str | bytes ):
-        data = super( )._verifyDataToSend( data )
+        data = Connection._stripDataToSend( data )
 
         if data is not None:
             wireData = "@" + data
             await self._writer.drain( )
             self._writer.write( wireData )
 
-    async def _fromWire( self, line: str ):
-        if line[0] != "@":
-            return await super( )._fromWire( line )
-
-        sepPos = str.index( " " )
-        return UserMessage( line[1:sepPos], line[sepPos + 1:] )
+    async def _parseMessageFromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException | UserMessage:
+        if line[0] == "@":
+            sepPos = str.index( " " )
+            return UserMessage( line[1:sepPos], line[sepPos + 1:] )
+        else:
+            return await super( )._parseMessageFromWire( line )
 
     async def _processMessage( self, msg ) -> None:
-        if not isinstance( msg, UserMessage ):
+        if isinstance( msg, UserMessage ):
+            await Connection._callListener( self._onUserMessage, msg.sender, msg.text )
+        else:
             await super( )._processMessage( msg )
-
-        Connection._callListener( self._onUserMessage, msg.sender, msg.text )
+        
 
     def clearListeners( self ) -> None:
         self._onUserMessage = None

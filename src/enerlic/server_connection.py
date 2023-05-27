@@ -1,12 +1,20 @@
 import asyncio
 
 
-from .connection import Connection
+from .connection import *
 
 
 class UserMessage:
     def __init__( self, text: str ):
         self.text = text
+
+
+class SendTextCommand:
+    def __init__( self, sender: bytes, text: str ):
+        self._raw = b"@" + sender + b" " + text.encode( )
+
+    def toWire( self ) -> bytes:
+        return self._raw
 
 
 class ServerConnection( Connection ):
@@ -31,25 +39,24 @@ class ServerConnection( Connection ):
     def onUserMessage( self, target = None ) -> None:
         self._onUserMessage = target
 
-    async def sendText( self, sender: bytes, data: str | bytes ) -> None:
-        data = super( )._stripDataToSend( data )
-
-        if data is not None:
-            wireData = b"@" + sender + " " + data
+    async def processCommand( self, command ) -> None:
+        if isinstance( command, SendTextCommand ):
             await self._writer.drain( )
-            self._writer.write( wireData )
+            self._writer.write( command.toWire( ) )
+        else:
+            raise Exception( "Internal error: unknown command" )
 
-    async def _fromWire( self, line: str ) -> UserMessage:
-        if line[0] != "@":
-            return await super( )._fromWire( line )
-
-        return UserMessage( line[1:] )
+    async def _parseMessageFromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException | UserMessage:
+        if line[0] == "@":
+            return UserMessage( line[1:] )
+        else:
+            return await super( )._parseMessagefromWire( line )
 
     async def _processMessage( self, msg ) -> None:
-        if not isinstance( msg, UserMessage ):
+        if isinstance( msg, UserMessage ):
+            await Connection._callListener( self._onUserMessage, self, msg.text )
+        else:
             await super( )._processMessage( msg )
-
-        await Connection._callListener( self._onUserMessage, self, msg.text )
 
     def clearListeners( self ) -> None:
         self._onUserMessage = None

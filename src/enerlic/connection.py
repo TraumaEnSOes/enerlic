@@ -80,21 +80,6 @@ class Connection:
                 target( *args, **kargs )
 
     @staticmethod
-    def _stripFromWire( line: bytes ) -> str:
-        if len( line ) == 0:
-            return ""
-
-        if line[-1] != EndOfLine:
-            return ""
-
-        stringLine = line.decode( ).strip( )
-
-        if len( stringLine ) == 0:
-            raise WireException( )
-
-        return stringLine
-
-    @staticmethod
     def _stripDataToSend( self, data: str | bytes ) -> bytes | None:
         if len( data ) == 0:
             return
@@ -117,28 +102,32 @@ class Connection:
         await self._writer.wait_closed( )
         await Connection._callListener( self._onStop, self )
 
-    async def _processMessage( self, msg ):
+    async def _processMessage( self, msg ) -> None:
         log = self._log
 
-        if isinstance( msg, Exception ):
-            await Connection._callListener( self._onException, self, msg )
-
-        elif isinstance( msg, Disconnected ):
+        if isinstance( msg, Disconnected ):
             self._stop = True
-
-        elif isinstance( msg, Ping ):
-            await self._writer.drain( )
-            self._writer.write( Pong.toWire( ) )
-
-        elif isinstance( msg, Pong ):
-            pass
-
         else:
-            errorMsg = "Internal error in '_process': Unknown message type"
-            log.error( errorMsg )
-            await Connection._callListener( self._onException, self, Exception( errorMsg ) )
+            self._dataReceived = True
 
-    def _fromWire( self, line: str ) -> Ping | Pong:
+            if isinstance( msg, WireException ):
+                self._stop = True
+                await Connection._callListener( self._onException, self, msg )
+
+            elif isinstance( msg, Ping ):
+                await self._writer.drain( )
+                self._writer.write( Pong.toWire( ) )
+
+            elif isinstance( msg, Pong ):
+                pass
+
+            else:
+                self._stop = True
+                errorMsg = "Internal error in '_process': Unknown message type"
+                log.error( errorMsg )
+                await Connection._callListener( self._onException, self, Exception( errorMsg ) )
+
+    def _parseMessagefromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException:
         log = self._log
 
         if len( line ) == 0:
@@ -147,25 +136,19 @@ class Connection:
             return Ping( )
         elif line == "O":
             return Pong( )
-
-        errorMsg = "Received invalid message"
-        log.error( errorMsg )
-        raise WireException( errorMsg )
+        else:
+            errorMsg = "Received invalid message"
+            log.error( errorMsg )
+            return WireException( errorMsg )
 
     async def _readTaskBody( self ) -> None:
         while self._stop == False:
             lineInBytes = await self._reader.readline( )
-            line = Connection._stripFromWire( lineInBytes )
-            self._dataReceived = True
+            stringLine = "" if len( lineInBytes ) == 0 else lineInBytes.decode( ).strip( )
 
-            try:
-                message = self._fromWire( line ) if len( line ) else Disconnected( )
-            except Exception as e:
-                message = e
+            message = self._parseMessagefromWire( stringLine )
 
             await self._processMessage( message )
 
         await self._cleanup( )
 
-
-__all__ = ( "Connection", )
