@@ -4,9 +4,13 @@ from collections import deque as Deque
 class FakeReader:
     def __init__( self ):
         self.queue = Deque( )
+        self._closed = False
+
+    def close( self ):
+        self._closed = True
 
     async def readline( self ):
-        return self.queue.popleft( )
+        return "" if self._closed else self.queue.popleft( )
 
     async def write( self, line ):
         self.queue.append( line )
