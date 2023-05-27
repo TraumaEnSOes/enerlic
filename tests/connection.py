@@ -32,7 +32,7 @@ class TestConnection( unittest.IsolatedAsyncioTestCase ):
 
         assert conn.running( ) == False
         assert stopCount == 1
-    
+
     async def test_ping_pong( self ):
         reader = FakeReader( )
         writer = FakeWriter( )
@@ -57,7 +57,7 @@ class TestConnection( unittest.IsolatedAsyncioTestCase ):
         def slotStop( connection ):
             nonlocal stopCount
 
-            stopCount = 0
+            stopCount += 1
 
         reader = FakeReader( )
         writer = FakeWriter( )
@@ -71,28 +71,30 @@ class TestConnection( unittest.IsolatedAsyncioTestCase ):
 
         assert stopCount == 1
         assert conn.running( ) == False
-"""
-    async def test_bad_wire( self ):
-        sentData = [ ]
 
-        def dataReceived( connection, err ):
-            sentData.append( err )
+    async def test_bad_wire( self ):
+        errsList = [ ]
+
+        def slotException( connection, err ):
+            nonlocal errsList
+
+            errsList.append( err )
 
         reader = FakeReader( )
         writer = FakeWriter( )
         conn = Connection( reader, writer )
 
-        conn.onException( dataReceived )
+        conn.onException( slotException )
 
         conn.run( )
-        await reader.write( b"\n" )
+        await reader.write( b"aaaaa\n" )
         await asyncio.sleep( 0.0 )
 
         await conn.stop( )
 
-        assert len( sentData ) == 1
-        assert isinstance( sentData[1], WireException )
-"""
+        assert len( errsList ) == 1
+        assert isinstance( errsList[0], WireException )
+
 
 if __name__ == "__main__":
     srcPath = os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) )
