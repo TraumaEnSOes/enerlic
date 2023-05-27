@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
 from enerlic.client_connection import *
 from fakes.streams import *
-from connection import TestConnection
+from utils.connection import TestConnection
 
 
 class TestClientConnection( unittest.IsolatedAsyncioTestCase, TestConnection ):
@@ -43,7 +43,7 @@ class TestClientConnection( unittest.IsolatedAsyncioTestCase, TestConnection ):
         assert outputList[0][1] == "0.0.0.0:0"
         assert outputList[0][2] == "Hello World!"
 
-    async def test_sent_text( self ):
+    async def test_send_text( self ):
         reader = FakeReader( )
         writer = FakeWriter( )
         conn = ClientConnection( reader, writer )

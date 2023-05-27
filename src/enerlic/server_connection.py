@@ -1,32 +1,19 @@
-import asyncio
-
-
 from .connection import *
-
 
 class UserMessage:
     def __init__( self, text: str ):
         self.text = text
 
-
-class SendTextCommand:
-    def __init__( self, sender: bytes, text: str ):
-        self._raw = b"@" + sender + b" " + text.encode( )
-
-    def toWire( self ) -> bytes:
-        return self._raw
-
-
 class ServerConnection( Connection ):
-    def __init__( self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, id: str | bytes ):
+    def __init__( self, reader, writer, id: str | bytes ):
         super( ).__init__( reader, writer )
 
         if isinstance( id, str ):
             self._id = id
             self._idInBytes = id.encode( )
         else:
-            self._id = id.decode( )
             self._idInBytes = id
+            self._id = id.decode( )
 
     @property
     def id( self ):
@@ -39,18 +26,19 @@ class ServerConnection( Connection ):
     def onUserMessage( self, target = None ) -> None:
         self._onUserMessage = target
 
-    async def processCommand( self, command ) -> None:
-        if isinstance( command, SendTextCommand ):
-            await self._writer.drain( )
-            self._writer.write( command.toWire( ) )
-        else:
-            raise Exception( "Internal error: unknown command" )
+    async def sendText( self, sender: bytes, data: str | bytes ):
+        data = Connection._stripDataToSend( data )
 
-    async def _parseMessageFromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException | UserMessage:
+        if len( data ):
+            wireData = b"@" + sender + b" " + data
+            await self._writer.drain( )
+            self._writer.write( wireData )
+
+    def _parseMessagefromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException | UserMessage:
         if line[0] == "@":
             return UserMessage( line[1:] )
         else:
-            return await super( )._parseMessagefromWire( line )
+            return super( )._parseMessageFromWire( line )
 
     async def _processMessage( self, msg ) -> None:
         if isinstance( msg, UserMessage ):
