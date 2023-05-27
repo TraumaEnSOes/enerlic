@@ -9,24 +9,27 @@ class ClientConnection( Connection ):
     def __init__( self, reader, writer ):
         super( ).__init__( reader, writer )
 
+    def onUserMessage( self, target = None ) -> None:
+        self._onUserMessage = target
+
     async def sendText( self, data: str | bytes ):
         data = Connection._stripDataToSend( data )
 
-        if data is not None:
-            wireData = "@" + data
+        if len( data ):
+            wireData = b"@" + data
             await self._writer.drain( )
             self._writer.write( wireData )
 
-    async def _parseMessageFromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException | UserMessage:
+    def _parseMessagefromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException | UserMessage:
         if line[0] == "@":
-            sepPos = str.index( " " )
+            sepPos = line.index( " " )
             return UserMessage( line[1:sepPos], line[sepPos + 1:] )
         else:
-            return await super( )._parseMessageFromWire( line )
+            return super( )._parseMessageFromWire( line )
 
     async def _processMessage( self, msg ) -> None:
         if isinstance( msg, UserMessage ):
-            await Connection._callListener( self._onUserMessage, msg.sender, msg.text )
+            await Connection._callListener( self._onUserMessage, self, msg.sender, msg.text )
         else:
             await super( )._processMessage( msg )
         

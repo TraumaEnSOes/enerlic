@@ -80,9 +80,9 @@ class Connection:
                 target( *args, **kargs )
 
     @staticmethod
-    def _stripDataToSend( self, data: str | bytes ) -> bytes | None:
+    def _stripDataToSend( data: str | bytes ) -> bytes:
         if len( data ) == 0:
-            return
+            return b""
             
         if isinstance( data, str ):
             data = data.encode( )
@@ -90,9 +90,9 @@ class Connection:
         data = data.strip( )
 
         if len( data ) == 0:
-            return
+            return b""
 
-        data = data + EndOfLine
+        data = data + b"\n"
 
         return data
 

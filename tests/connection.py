@@ -4,10 +4,11 @@ import os
 import sys
 
 
+from enerlic.connection import Connection, Ping, Pong, WireException
 from fakes.streams import *
 
 
-class TestConnection( unittest.IsolatedAsyncioTestCase ):
+class TestConnection:
     async def test_run_stop( self ):
         stopCount = 0
 
@@ -47,8 +48,8 @@ class TestConnection( unittest.IsolatedAsyncioTestCase ):
         assert writer.closed == True
         assert conn.dataReceived( ) == True
 
-        data = writer.queue.popleft( )
-        assert data == Pong.toWire( )
+        assert len( writer.wire ) == 1
+        assert writer.wire[0] == Pong.toWire( )
         assert conn.running( ) == False
 
     async def test_disconnected( self ):
@@ -94,14 +95,3 @@ class TestConnection( unittest.IsolatedAsyncioTestCase ):
 
         assert len( errsList ) == 1
         assert isinstance( errsList[0], WireException )
-
-
-if __name__ == "__main__":
-    srcPath = os.path.dirname( os.path.dirname( os.path.abspath( __file__ ) ) )
-    srcPath = os.path.join( srcPath, "src" )
-
-    sys.path.append( srcPath )
-
-    from enerlic.connection import Connection, Ping, Pong, WireException
-
-    unittest.main( )
