@@ -115,8 +115,8 @@ class Connection:
                 await Connection._callListener( self._onException, self, msg )
 
             elif isinstance( msg, Ping ):
-                await self._writer.drain( )
                 self._writer.write( Pong.toWire( ) )
+                await self._writer.drain( )
 
             elif isinstance( msg, Pong ):
                 pass

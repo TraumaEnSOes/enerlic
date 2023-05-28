@@ -1,51 +1,25 @@
 import argparse
 import asyncio
-import logging
-import logging.config
+import typing
+import sys
 
-
-from enerlic.client import Client
+from enerlic.client_connection import ClientConnection
 
 
 DEFAULT_PORT = 4444
-DEFAULT_TIMEOUT = 5
 DEFAULT_SERVER = "127.0.0.1"
 
-LOG_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": True,
-    "formatters": { 
-        "standard": { 
-            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-        },
-    },
-    "handlers": { 
-        "console": { 
-            "level": "DEBUG",
-            "formatter": "standard",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stdout",  # Default is stderr
-        }
-    },
-    "loggers": { 
-        "": {
-            "handlers": [ "console" ],
-            "level": "INFO",
-            "propagate": False
-        },
-        "connection": {
-            "handlers": [ "console" ],
-            "level": "INFO",
-            "propagate": False
-        }
-    }
-}
+
+async def connectStdIn( ) -> asyncio.StreamReader:
+    loop = asyncio.get_event_loop( )
+    reader = asyncio.StreamReader( )
+    protocol = asyncio.StreamReaderProtocol( reader )
+    await loop.connect_read_pipe( lambda: protocol, sys.stdin )
+    return reader
 
 
-def ParseCli( argv = None ):
+def parseCli( argv = None ):
     parser = argparse.ArgumentParser( )
-    parser.add_argument( "-d", "--debug", action = "store_true", dest = "debug", help = "Enable debug (log all to console)" )
-    parser.add_argument( "-t", "--timeout", metavar = "<Timeout>", type = int, default = DEFAULT_TIMEOUT, dest = "timeout", help = f"Client timeout in seconds (default {DEFAULT_TIMEOUT})" )
     parser.add_argument( metavar = "<Server>", nargs = "?", dest = "server", default = DEFAULT_SERVER, help = f"Server IP or DNS to connect (default {DEFAULT_SERVER})" )
     parser.add_argument( metavar = "<Port>", type = int, nargs = "?", default = 4444, dest = "port", help = f"Port to listener (default {DEFAULT_PORT})" )
 
@@ -54,36 +28,42 @@ def ParseCli( argv = None ):
     return args
 
 
-def SetupLogger( debugMode: bool ):
-    if debugMode:
-        LOG_CONFIG["loggers"][""]["level"] = "DEBUG"
-        LOG_CONFIG["loggers"]["connection"]["level"] = "DEBUG"
+async def mainLoop( stdin: asyncio.StreamReader, connection: ClientConnection ) -> None:
+    async def userMessageHandler( connection, sender, text ):
+        print( f"From {sender}: {text}", flush = True )
 
-    return logging.config.dictConfig( LOG_CONFIG )
+    async def userInputTaskBody( ):
+        nonlocal stdin, connection
+
+        while True:
+            text = await stdin.readline( )
+
+            if text == b"@exit\n":
+                break
+            else:
+                await connection.sendText( text )
+
+    connection.onUserMessage( userMessageHandler )
+    connection.run( )
+
+    userInputTask = asyncio.create_task( userInputTaskBody( ) )
+    
+    await userInputTask
 
 
-async def handle_echo(reader, writer):
-    data = await reader.read(100)
-    message = data.decode()
-    addr = writer.get_extra_info('peername')
+async def main( ) -> None:
+    cliArgs = parseCli( )
+    stdin = await connectStdIn( )
+    reader, writer = await asyncio.open_connection( cliArgs.server, cliArgs.port )
 
-    print(f"Received {message!r} from {addr!r}")
+    im = writer.get_extra_info( "sockname" )
+    im = im[0] + ":" + str( im[1] )
+    print( "I'm", im, flush = True )
+    print( "Enter lines to send ('@exit' finish the program)" )
 
-    print(f"Send: {message!r}")
-    writer.write(data)
-    await writer.drain()
+    conn = ClientConnection( reader, writer )
 
-    print("Close the connection")
-    writer.close()
-    await writer.wait_closed()
-
-
-async def main( ):
-    cliArgs = ParseCli( )
-    SetupLogger( cliArgs.debug )
-
-    asyncClient = Client( cliArgs.server, cliArgs.port, cliArgs.timeout )
-    await asyncClient.run( )
+    await mainLoop( stdin, conn )
 
 
 if __name__ == "__main__":

@@ -17,8 +17,8 @@ class ClientConnection( Connection ):
 
         if len( data ):
             wireData = b"@" + data
-            await self._writer.drain( )
             self._writer.write( wireData )
+            await self._writer.drain( )
 
     def _parseMessagefromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException | UserMessage:
         if line[0] == "@":
