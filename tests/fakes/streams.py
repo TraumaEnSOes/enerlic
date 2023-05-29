@@ -11,10 +11,12 @@ class FakeReader:
         await self.queue.put( 0 )
 
     async def readline( self ) -> bytes:
-        if self._closed: return b""
-        else:
-            value = await self.queue.get( )
-            return b"" if self._closed else value
+        if self._closed:
+            return b""
+
+        value = await self.queue.get( )
+
+        return b"" if self._closed else value
 
     async def write( self, line ):
         await self.queue.put( line )
