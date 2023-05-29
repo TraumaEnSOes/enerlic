@@ -3,7 +3,7 @@ import asyncio
 
 class FakeServerConnection:
     def __init__( self, id: bytes | str ):
-        self._running = False
+        self.running = False
 
         if isinstance( id, str ):
             self._id = id
@@ -14,15 +14,27 @@ class FakeServerConnection:
 
         self._onStop = None        
         self._onUserMessage = None
+        self.textSent = [ ]
+
+    @property
+    def id( self ):
+        return self._id
+
+    @property
+    def idInBytes( self ):
+        return self._idInBytes
 
     def run( self ):
-        self._running = True
+        self.running = True
 
     def onStop( self, target = None ):
         self._onStop = target
 
     def onUserMessage( self, target = None ):
         self._onUserMessage = target
+
+    async def stop( self ):
+        self.running = False
 
     @staticmethod
     async def _callListener( target, *args, **kargs ):
@@ -32,9 +44,11 @@ class FakeServerConnection:
             else:
                 target( *args, **kargs )
 
+    async def sendText( self, sender: bytes, data: str | bytes ):
+        self.textSent.append( ( sender, data, ) )
 
-    def fakeStop( self ):
-        FakeServerConnection._callListener( self._onStop, self )
+    async def fakeStop( self ):
+        await FakeServerConnection._callListener( self._onStop, self )
 
-    def fakeUserMessage( self, text ):
-        FakeServerConnection._callListener( self._onUserMessage, self, text )
+    async def fakeUserMessage( self, text: str ):
+        await FakeServerConnection._callListener( self._onUserMessage, self, text )

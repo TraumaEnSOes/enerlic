@@ -26,11 +26,11 @@ class Router:
         self._onDisconnected = target
 
     def clientsIds( self ):
-        return copy.deepcopy( self._clients.keys( ) )
+        return copy.deepcopy( list( self._clients.keys( ) ) )
 
     async def stop( self ):
         if self._task is not None:
-            await self._task.cancel( )
+            self._task.cancel( )
             for conn in self._clients.values( ):
                 await conn.stop( )
 
@@ -42,16 +42,15 @@ class Router:
     
             sender = message[0]
             senderId = sender.id
-            senderIdInBytes = sender.idInBytes
             text = message[1]
-            clients = copy.deepcopy( self._clients.keys( ) )
+            clients = copy.deepcopy( tuple( self._clients.keys( ) ) )
 
             for clientId in clients:
                 if clientId != sender.id:
                     client = self._clients.get( clientId )
 
                     if client is not None:
-                        await client.sendText( senderId, text )
+                        await client.sendText( sender.idInBytes, text )
 
     async def _slotUserMessage( self, conn: ServerConnection, text: str ) -> None:
         now = "0000" + str( round( time.time( ) * 1000 ) )
@@ -61,5 +60,5 @@ class Router:
         await self._queue.put( ( conn, text, ) )
     
     async def _slotDisconnection( self, conn ):
-        Connection._callListener( self._onDisconnected, conn )
+        await Connection._callListener( self._onDisconnected, conn )
         del self._clients[conn.id]
