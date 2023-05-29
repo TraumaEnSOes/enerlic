@@ -157,8 +157,9 @@ class Connection:
             self._dataReceived = True
 
             if isinstance( msg, WireException ):
-                self._stop = True
                 await Connection._callListener( self._onException, self, msg )
+                await self.stop( )
+                self._onStop = None
 
             elif isinstance( msg, Ping ):
                 self._writer.write( Pong.toWire( ) )
