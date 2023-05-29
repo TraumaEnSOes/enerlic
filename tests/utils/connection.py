@@ -49,7 +49,7 @@ class TestConnection:
         conn.onStop( slotStop )
         conn.run( )
 
-        writer.close( )
+        await reader.close( )
         await asyncio.sleep( 0.0 )
 
         assert stopCount == 1
@@ -87,7 +87,7 @@ class TestConnection:
         conn.onStop( slotStop )
 
         conn.run( )
-        reader.close( )
+        await reader.close( )
         await asyncio.sleep( 0.0 )
 
         assert stopCount == 1

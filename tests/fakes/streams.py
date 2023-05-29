@@ -1,24 +1,23 @@
-from collections import deque as Deque
+import asyncio
 
 
 class FakeReader:
     def __init__( self ):
-        self.queue = Deque( )
+        self.queue = asyncio.Queue( )
         self._closed = False
 
-    def close( self ):
+    async def close( self ):
         self._closed = True
+        await self.queue.put( 0 )
 
     async def readline( self ) -> bytes:
-        if self._closed:
-            return b""
-        elif len( self.queue ) == 0:
-            return b"P\n"
+        if self._closed: return b""
         else:
-            return self.queue.popleft( )
+            value = await self.queue.get( )
+            return b"" if self._closed else value
 
     async def write( self, line ):
-        self.queue.append( line )
+        await self.queue.put( line )
 
 
 class FakeWriter:
