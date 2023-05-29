@@ -18,6 +18,11 @@ from utils.connection import TestConnection
 
 class TestClientConnection( unittest.IsolatedAsyncioTestCase, TestConnection ):
     async def test_user_message( self ):
+        """
+        The server did send a message to this client.
+
+        The signal onUserMessage must be emitted
+        """
         outputList = [ ]
 
         async def slotOnUserMessage( connection, sender, text ):
@@ -44,6 +49,11 @@ class TestClientConnection( unittest.IsolatedAsyncioTestCase, TestConnection ):
         assert outputList[0][2] == "Hello World!"
 
     async def test_send_text( self ):
+        """
+        This client send a message to the server.
+
+        The message must be written over the socket in the right binary format.
+        """
         reader = FakeReader( )
         writer = FakeWriter( )
         conn = ClientConnection( reader, writer )

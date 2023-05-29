@@ -17,7 +17,13 @@ from enerlic.router import Router
 
 
 class TestRouter( unittest.IsolatedAsyncioTestCase ):
-    async def test_without_clients( self ):
+    async def test_client_disconnected( self ):
+        """
+        A client did disconnect from this server.
+
+        The signal onDisconnected must be emitted.
+        The client must be deleted from the active clients list.
+        """
         disconnections = 0
 
         def slotDisconnected( conn ):
@@ -50,6 +56,11 @@ class TestRouter( unittest.IsolatedAsyncioTestCase ):
         assert len( logLines ) == 0
 
     async def test_single_client( self ):
+        """
+        Only one connected client.
+        
+        When a message arrives, it must be not forwarded to the client itself.
+        """
         logStream = io.StringIO( )
         router = Router( logStream )
 
@@ -65,6 +76,11 @@ class TestRouter( unittest.IsolatedAsyncioTestCase ):
         assert len( client1.textSent ) == 0
 
     async def test_2_clients( self ):
+        """
+        Two connected clients.
+
+        When a message arrives, it must be forwarded to the other client.
+        """
         logStream = io.StringIO( )
         router = Router( logStream )
 
@@ -89,6 +105,13 @@ class TestRouter( unittest.IsolatedAsyncioTestCase ):
         assert client2.textSent[0][1] == "Fake text from client1"
 
     async def test_3_clients( self ):
+        """
+        Three connected clients.
+
+        When a message arrives, it must be forwarded to the others clients.
+
+        THE ORDER OF THE FORWARD IS IMPLEMENTATION-DEPENDENT !!!
+        """
         logStream = io.StringIO( )
         router = Router( logStream )
 
@@ -124,7 +147,6 @@ class TestRouter( unittest.IsolatedAsyncioTestCase ):
         assert client3.textSent[0][1] == "Fake text from client1"
         assert client3.textSent[1][0] == b"fake2"
         assert client3.textSent[1][1] == "Fake text from client2"
-
 
 
 if __name__ == "__main__":
