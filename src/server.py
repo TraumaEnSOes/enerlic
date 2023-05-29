@@ -34,6 +34,9 @@ async def mainLoop( port: int, router: Router ) -> None:
 
         print( "New client added:", id )
 
+    async def clientDisconnected( client ):
+        print( "Client disconnected:", client.id, flush = True )
+
     asyncServer = await asyncio.start_server( newConnectionHandler, "0.0.0.0", port )
     addrs = ", ".join( str( sock.getsockname( ) ) for sock in asyncServer.sockets )
     print( f"Server started, listening on {addrs}" )

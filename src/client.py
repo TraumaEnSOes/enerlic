@@ -29,26 +29,38 @@ def parseCli( argv = None ):
 
 
 async def mainLoop( stdin: asyncio.StreamReader, connection: ClientConnection ) -> None:
+    userInputTask: asyncio.Task = None
+
+    async def clientDisconnected( connection ):
+        nonlocal userInputTask
+
+        userInputTask.cancel( )
+
     async def userMessageHandler( connection, sender, text ):
         print( f"From {sender}: {text}", flush = True )
 
     async def userInputTaskBody( ):
         nonlocal stdin, connection
 
-        while True:
-            text = await stdin.readline( )
+        try:
+            while True:
+                text = await stdin.readline( )
 
-            if text == b"@exit\n":
-                break
-            else:
-                await connection.sendText( text )
+                if text == b"@exit\n":
+                    break
+                else:
+                    await connection.sendText( text )
+        except asyncio.CancelledError:
+            pass
 
     connection.onUserMessage( userMessageHandler )
+    connection.onStop( clientDisconnected )
     connection.run( )
 
     userInputTask = asyncio.create_task( userInputTaskBody( ) )
     
     await userInputTask
+    print( "Finish" )
 
 
 async def main( ) -> None:

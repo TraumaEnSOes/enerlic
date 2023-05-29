@@ -15,10 +15,18 @@ class Router:
         self._queue = asyncio.Queue( )
         self._task = asyncio.create_task( self._taskBody( ) )
 
+        self._onDisconnected = None
+
     def addClient( self, conn: ServerConnection ) -> None:
         conn.onStop( self._slotDisconnection )
         conn.onUserMessage( self._slotUserMessage )
         self._clients[conn.id] = conn
+
+    def onDisconnected( self, target = None ):
+        self._onDisconnected = target
+
+    def clientsIds( self ):
+        return copy.deepcopy( self._clients.keys( ) )
 
     async def stop( self ):
         if self._task is not None:
@@ -33,12 +41,17 @@ class Router:
             message = await self._queue.get( )
     
             sender = message[0]
-            senderId = sender.idInBytes
+            senderId = sender.id
+            senderIdInBytes = sender.idInBytes
             text = message[1]
+            clients = copy.deepcopy( self._clients.keys( ) )
 
-            for conn in self._clients.values( ):
-                if ( sender != conn ) and ( self._clients.get( conn.id ) is not None):
-                    await conn.sendText( senderId, text )
+            for clientId in clients:
+                if clientId != sender.id:
+                    client = self._clients.get( clientId )
+
+                    if client is not None:
+                        await client.sendText( senderId, text )
 
     async def _slotUserMessage( self, conn: ServerConnection, text: str ) -> None:
         now = "0000" + str( round( time.time( ) * 1000 ) )
@@ -48,4 +61,5 @@ class Router:
         await self._queue.put( ( conn, text, ) )
     
     async def _slotDisconnection( self, conn ):
+        Connection._callListener( self._onDisconnected, conn )
         del self._clients[conn.id]

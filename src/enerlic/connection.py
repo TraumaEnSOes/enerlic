@@ -1,5 +1,4 @@
 import asyncio
-import logging
 
 
 from .end_of_line import EndOfLine
@@ -27,10 +26,7 @@ class Disconnected:
 
 class Connection:
     def __init__( self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter ):
-        log = logging.getLogger( "connection" )
-
         self._stop = True
-        self._log = log
         self._reader = reader
         self._writer = writer
         self._dataReceived = False
@@ -103,8 +99,6 @@ class Connection:
         await Connection._callListener( self._onStop, self )
 
     async def _processMessage( self, msg ) -> None:
-        log = self._log
-
         if isinstance( msg, Disconnected ):
             self._stop = True
         else:
@@ -123,13 +117,9 @@ class Connection:
 
             else:
                 self._stop = True
-                errorMsg = "Internal error in '_process': Unknown message type"
-                log.error( errorMsg )
-                await Connection._callListener( self._onException, self, Exception( errorMsg ) )
+                await Connection._callListener( self._onException, self, Exception( "Internal error in '_process': Unknown message type" ) )
 
     def _parseMessagefromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException:
-        log = self._log
-
         if len( line ) == 0:
             return Disconnected( )
         elif line == "I":
@@ -137,18 +127,19 @@ class Connection:
         elif line == "O":
             return Pong( )
         else:
-            errorMsg = "Received invalid message"
-            log.error( errorMsg )
-            return WireException( errorMsg )
+            return WireException( "Received invalid message" )
 
     async def _readTaskBody( self ) -> None:
-        while self._stop == False:
-            lineInBytes = await self._reader.readline( )
-            stringLine = "" if len( lineInBytes ) == 0 else lineInBytes.decode( ).strip( )
+        try:
+            while self._stop == False:
+                lineInBytes = await self._reader.readline( )
+                stringLine = "" if len( lineInBytes ) == 0 else lineInBytes.decode( ).strip( )
 
-            message = self._parseMessagefromWire( stringLine )
+                message = self._parseMessagefromWire( stringLine )
 
-            await self._processMessage( message )
+                await self._processMessage( message )
+        except asyncio.CancelledError:
+            pass
 
         await self._cleanup( )
 
