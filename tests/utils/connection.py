@@ -34,6 +34,26 @@ class TestConnection:
         assert conn.running( ) == False
         assert stopCount == 1
 
+    async def test_disconnect( self ):
+        stopCount = 0
+
+        def slotStop( connection ):
+            nonlocal stopCount
+
+            stopCount += 1
+
+        reader = FakeReader( )
+        writer = FakeWriter( )
+        conn = Connection( reader, writer )
+
+        conn.onStop( slotStop )
+        conn.run( )
+
+        writer.close( )
+        await asyncio.sleep( 0.0 )
+
+        assert stopCount == 1
+
     async def test_ping_pong( self ):
         reader = FakeReader( )
         writer = FakeWriter( )

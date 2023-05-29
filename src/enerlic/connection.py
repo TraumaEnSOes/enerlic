@@ -93,7 +93,6 @@ class Connection:
         return data
 
     async def _cleanup( self ):
-        await self._writer.drain( )
         self._writer.close( )
         await self._writer.wait_closed( )
         await Connection._callListener( self._onStop, self )

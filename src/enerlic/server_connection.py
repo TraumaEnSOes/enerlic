@@ -36,10 +36,10 @@ class ServerConnection( Connection ):
             await self._writer.drain( )
 
     def _parseMessagefromWire( self, line: str ) -> Ping | Pong | Disconnected | WireException | UserMessage:
-        if line[0] == "@":
+        if len( line ) and ( line[0] == "@"):
             return UserMessage( line[1:] )
         else:
-            return super( )._parseMessageFromWire( line )
+            return super( )._parseMessagefromWire( line )
 
     async def _processMessage( self, msg ) -> None:
         if isinstance( msg, UserMessage ):

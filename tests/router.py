@@ -27,6 +27,7 @@ class TestRouter( unittest.IsolatedAsyncioTestCase ):
 
         logStream = io.StringIO( )
         router = Router( logStream )
+        router.onDisconnected( slotDisconnected )
 
         assert len( router.clientsIds( ) ) == 0
 

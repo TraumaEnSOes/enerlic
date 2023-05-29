@@ -10,7 +10,12 @@ class FakeReader:
         self._closed = True
 
     async def readline( self ) -> bytes:
-        return b"" if self._closed else self.queue.popleft( )
+        if self._closed:
+            return b""
+        elif len( self.queue ) == 0:
+            return b"P\n"
+        else:
+            return self.queue.popleft( )
 
     async def write( self, line ):
         self.queue.append( line )
