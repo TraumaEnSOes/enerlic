@@ -11,6 +11,9 @@ DEFAULT_SERVER = "127.0.0.1"
 
 
 async def connectStdIn( ) -> asyncio.StreamReader:
+    """
+    Returns a asyncio.StreamReader, to we can uses stdin with async methods.
+    """
     loop = asyncio.get_event_loop( )
     reader = asyncio.StreamReader( )
     protocol = asyncio.StreamReaderProtocol( reader )
@@ -53,6 +56,7 @@ async def mainLoop( stdin: asyncio.StreamReader, connection: ClientConnection ) 
         except asyncio.CancelledError:
             pass
 
+    # Connect signals.
     connection.onUserMessage( userMessageHandler )
     connection.onStop( clientDisconnected )
     connection.run( )

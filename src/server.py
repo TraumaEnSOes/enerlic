@@ -24,6 +24,7 @@ def ParseCli( argv = None ):
 
 async def mainLoop( port: int, router: Router ) -> None:
     async def newConnectionHandler( reader, writer ):
+        # Print the connection and append the client to the router.
         id = writer.get_extra_info('peername')
         id = id[0] + ":" + str( id[1] )
         client = ServerConnection( reader, writer, id )
@@ -37,6 +38,7 @@ async def mainLoop( port: int, router: Router ) -> None:
     async def clientDisconnected( client ):
         print( "Client disconnected:", client.id, flush = True )
 
+    # To print whan a client disconnects
     router.onDisconnected( clientDisconnected )
 
     asyncServer = await asyncio.start_server( newConnectionHandler, "0.0.0.0", port )
