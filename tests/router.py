@@ -58,7 +58,7 @@ class TestRouter( unittest.IsolatedAsyncioTestCase ):
     async def test_single_client( self ):
         """
         Only one connected client.
-        
+
         When a message arrives, it must be not forwarded to the client itself.
         """
         logStream = io.StringIO( )
